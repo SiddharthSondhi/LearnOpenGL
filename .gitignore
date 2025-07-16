@@ -1,0 +1,18 @@
+# Visual Studio specific
+.vs/
+*.vcxproj.user
+*.VC.db
+*.VC.opendb
+
+# Build output
+build/
+x64/
+*.exe
+*.obj
+*.lib
+*.pdb
+*.dll
+*.log
+
+# Auto-generated filters
+*.vcxproj.filters
