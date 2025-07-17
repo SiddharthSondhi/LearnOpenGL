@@ -153,6 +153,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="shaders\cubeFragmentShader.glsl" />
+    <None Include="shaders\cubeVertexShader.glsl" />
+    <None Include="shaders\lightFragmentShader.glsl" />
+    <None Include="shaders\lightVertexShader.glsl" />
     <None Include="shaders\simpleFragmentShader.glsl" />
     <None Include="shaders\simpleVertexShader.glsl" />
   </ItemGroup>
