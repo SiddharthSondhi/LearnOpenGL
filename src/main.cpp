@@ -333,19 +333,21 @@ int main() {
         glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
+        glm::mat3 normalMat = glm::transpose(glm::inverse(view * model));
+
         
         cubeShader.setMat4("model", model);
         cubeShader.setMat4("view", view);
         cubeShader.setMat4("projection", projection);
+        cubeShader.setMat3("normalMat", normalMat);
 
-        cubeShader.setVec3("camPos", camera.position);
         cubeShader.setVec3("lightPos", lightPos);
 
 
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        //drawCubes(cubeShader);
+        drawCubes(cubeShader);
 
         //-------------------light shader--------------------------------
         lightShader.use();
@@ -432,8 +434,8 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
 }
 
 void drawCubes(Shader& shader){
+
     glm::vec3 cubePositions[] = {
-    glm::vec3(0.0f,  0.0f,  0.0f),
     glm::vec3(2.0f,  5.0f, -15.0f),
     glm::vec3(-1.5f, -2.2f, -2.5f),
     glm::vec3(-3.8f, -2.0f, -12.3f),
@@ -448,17 +450,23 @@ void drawCubes(Shader& shader){
     shader.use();
 
     glm::mat4 view = camera.getViewMatrix();
-    shader.setMat4("view", view);
-
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
+
+
+    shader.setMat4("view", view);
     shader.setMat4("projection", projection);
 
-    for (unsigned int i = 0; i < 10; i++)
+
+    for (unsigned int i = 0; i < 9; i++)
     {
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, cubePositions[i]);
         model = glm::rotate(model, glm::radians(20.0f * i), glm::normalize(glm::vec3(1, 1, 1)));
         model = glm::rotate(model, (float)glfwGetTime() * glm::radians(((i % 4) + 1) * 80.f), glm::vec3(0.5f, 1.0f, 0.0f));
+
+        glm::mat3 normalMat = glm::transpose(glm::inverse(view * model));
+
+        shader.setMat3("normalMat", normalMat);
         shader.setMat4("model", model);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
