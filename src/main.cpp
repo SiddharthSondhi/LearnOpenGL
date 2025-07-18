@@ -10,6 +10,7 @@
 #include "Shader.h"
 #include "Camera.h"
 
+
 // function prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -29,7 +30,6 @@ Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 float lastMousePosX = WINDOW_WIDTH / 2, lastMousePosY = WINDOW_HEIGHT / 2; // position of mouse last frame, used to calculate yaw and pitch for camera when moving mouse 
 bool firstMouse = true;
 
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
 
 
@@ -101,7 +101,7 @@ int main() {
     0.5f, 1.0f   // top-center corner
     };
 
-    float verticesCube[] = {
+    float verticesCubeTexture[] = {
     // positions          // texture coords
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -146,19 +146,63 @@ int main() {
     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
+    float verticesCubeNormals[] = {
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+    };
+
     //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\
 
     // --------cube VAO-----------
-    GLuint VBO, cubeVAO, EBO;
+    GLuint cubeVBO, cubeVAO, EBO;
     glGenVertexArrays(1, &cubeVAO);
 
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
     glBindVertexArray(cubeVAO);
 
     // set up VBO
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);    
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCube), verticesCube, GL_STATIC_DRAW);
+    glGenBuffers(1, &cubeVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);    
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCubeNormals), verticesCubeNormals, GL_STATIC_DRAW);
 
     // set up EBO
     //glGenBuffers(1, &EBO);
@@ -166,7 +210,7 @@ int main() {
     //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesRectangle), indicesRectangle, GL_STATIC_DRAW);
 
     // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
     // color attribute
@@ -174,23 +218,20 @@ int main() {
     glEnableVertexAttribArray(1);*/
 
     // texture attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
     //--------light VAO-----------
-    unsigned int lightVAO;
+    GLuint lightVAO;
     glGenVertexArrays(1, &lightVAO);
     glBindVertexArray(lightVAO);
 
-    // we only need to bind to the VBO, the container's VBO's data already contains the data.
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
     
     //vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
     
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ TEXTURES ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     unsigned int texture1, texture2;
@@ -251,10 +292,14 @@ int main() {
     cubeShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
     cubeShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 
+
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
     glEnable(GL_DEPTH_TEST);
+
+    float lightOrbitRadius = 1.5f;
+    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -262,6 +307,7 @@ int main() {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
 
         // -------------------------input------------------------------
         processInput(window);
@@ -292,21 +338,35 @@ int main() {
         cubeShader.setMat4("view", view);
         cubeShader.setMat4("projection", projection);
 
+        cubeShader.setVec3("camPos", camera.position);
+        cubeShader.setVec3("lightPos", lightPos);
+
+
         glBindVertexArray(cubeVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        drawCubes(cubeShader);
+        //drawCubes(cubeShader);
 
         //-------------------light shader--------------------------------
         lightShader.use();
+        
+        glm::vec3 basePos;
+        basePos.x = sin(glfwGetTime() * 2) * lightOrbitRadius;
+        basePos.y = 0.0f;
+        basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
+
+        glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f))); 
+        lightPos = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 
         model = glm::mat4(1.0f);
         model = glm::translate(model, lightPos);
         model = glm::scale(model, glm::vec3(0.2f));
+
         
         lightShader.setMat4("model", model);
         lightShader.setMat4("view", view);
         lightShader.setMat4("projection", projection);
+
 
         glBindVertexArray(lightVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -317,7 +377,6 @@ int main() {
     }
 
     glfwTerminate();
-    return 0;
 }
 
 // process all inputs
