@@ -202,10 +202,16 @@ int main() {
     
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    // load textures
     GLuint diffuseMap = loadTexture("./textures/container2.png");
+    GLuint specularMap = loadTexture("./textures/container2_specular.png");
+    GLuint emissionMap = loadTexture("./textures/container2_emission.png");
 
     cubeShader.use();
     cubeShader.setInt("material.diffuse", 0);
+    cubeShader.setInt("material.specular", 1);
+    cubeShader.setInt("material.emission", 2);
+
     cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
     cubeShader.setFloat("material.shininess", 32.0f);
 
@@ -256,7 +262,7 @@ int main() {
         cubeShader.setVec3("lightPos", lightPos);
 
         glm::vec3 lightColor = glm::vec3(1.0f);
-        /*lightColor.x = sin(glfwGetTime() * 2.0f);
+       /* lightColor.x = sin(glfwGetTime() * 2.0f);
         lightColor.y = sin(glfwGetTime() * 0.7f);
         lightColor.z = sin(glfwGetTime() * 1.3f);*/
 
@@ -269,6 +275,12 @@ int main() {
         // bind diffuse map
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, diffuseMap);
+        // bind specular map
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, specularMap);
+        // bind emission map
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, emissionMap);
 
 
         glBindVertexArray(cubeVAO);
@@ -459,12 +471,11 @@ GLuint loadTexture(char const* path) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
     }
     else {
         std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
     }
+
+    stbi_image_free(data);
     return textureID;
 }
