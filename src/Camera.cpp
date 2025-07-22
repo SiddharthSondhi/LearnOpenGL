@@ -3,7 +3,7 @@
 Camera::Camera(glm::vec3 position, glm::vec3 worldUp, float yaw, float pitch) :
 	
     front(glm::vec3(0.0f, 0.0f, -1.0f)), 
-    movementSpeed(2.5f), 
+    movementSpeed(5.0f), 
     mouseSensitivity(0.1f), 
     zoom(45.0f) {
 

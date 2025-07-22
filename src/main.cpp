@@ -19,6 +19,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void drawRotatingCubes(Shader& shader);
 void drawManyCubes(Shader& shader);
 float randomFloat(float min, float max);
@@ -37,6 +38,7 @@ float lastMousePosX = WINDOW_WIDTH / 2, lastMousePosY = WINDOW_HEIGHT / 2; // po
 bool firstMouse = true;
 
 std::vector<glm::vec3> randomCubePositions;
+bool enableFlashLight = false;
 
 
 int main() {
@@ -72,6 +74,8 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
+    glfwSetKeyCallback(window, keyCallback);
+
 
 
     //Shader simpleShader("./shaders/simpleVertexShader.glsl", "./shaders/simpleFragmentShader.glsl");
@@ -157,6 +161,16 @@ int main() {
         randomCubePositions.push_back(glm::vec3(randomFloat(-SPAWN_SIZE, SPAWN_SIZE), randomFloat(-SPAWN_SIZE, SPAWN_SIZE), randomFloat(-SPAWN_SIZE, SPAWN_SIZE)));
     }
 
+    std::vector<glm::vec3> lightPositions = {
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f, 3.0f, -5.0f)
+    };
+
+    std::vector<glm::vec3> lightColors = {
+        glm::vec3(1.0f, 0.3f, 0.3f),
+        glm::vec3(0.3f, 0.3f, 1.0f)
+    };
+
     //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     // --------cube VAO-----------
@@ -207,17 +221,46 @@ int main() {
     GLuint specularMap = loadTexture("./textures/container2_specular.png");
     GLuint emissionMap = loadTexture("./textures/container2_emission.png");
 
+    // material properties
     cubeShader.use();
     cubeShader.setInt("material.diffuse", 0);
     cubeShader.setInt("material.specular", 1);
     cubeShader.setInt("material.emission", 2);
-
     cubeShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
     cubeShader.setFloat("material.shininess", 32.0f);
 
-    cubeShader.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-    cubeShader.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f); 
-    cubeShader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+    // directional light
+    cubeShader.setVec3("dirLight.ambient", 0.1f, 0.1f, 0.1f);
+    cubeShader.setVec3("dirLight.diffuse", 0.3f, 0.3f, 0.3f); 
+    cubeShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
+    cubeShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+
+    // point lights
+    cubeShader.setFloat("pointLights[0].constant", 1.0f);
+    cubeShader.setFloat("pointLights[0].linear", 0.022);
+    cubeShader.setFloat("pointLights[0].quadratic", 0.0019);
+    cubeShader.setVec3("pointLights[0].ambient", lightColors[0] * 0.1f);
+    cubeShader.setVec3("pointLights[0].diffuse", lightColors[0]);
+    cubeShader.setVec3("pointLights[0].specular", lightColors[0]);
+
+    cubeShader.setFloat("pointLights[1].constant", 1.0f);
+    cubeShader.setFloat("pointLights[1].linear", 0.022);
+    cubeShader.setFloat("pointLights[1].quadratic", 0.0019);
+    cubeShader.setVec3("pointLights[1].ambient", lightColors[1] * 0.1f);
+    cubeShader.setVec3("pointLights[1].diffuse", lightColors[1]);
+    cubeShader.setVec3("pointLights[1].specular", lightColors[1]);
+
+    // spot light
+    cubeShader.setFloat("spotLight.constant", 1.0f);
+    cubeShader.setFloat("spotLight.linear", 0.022);
+    cubeShader.setFloat("spotLight.quadratic", 0.0019);
+    cubeShader.setVec3("spotLight.ambient", 0.2f, 0.2f, 0.2f);
+    cubeShader.setVec3("spotLight.diffuse", 0.5f, 0.5f, 0.5f);
+    cubeShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+    cubeShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
+    cubeShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+
+
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
     glEnable(GL_DEPTH_TEST);
@@ -226,7 +269,7 @@ int main() {
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
     float lightOrbitRadius = 1.5f;
-    glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -253,24 +296,46 @@ int main() {
         glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
         glm::mat3 normalMat = glm::transpose(glm::inverse(view * model));
 
-        
+        //update uniform values
         cubeShader.setMat4("model", model);
         cubeShader.setMat4("view", view);
         cubeShader.setMat4("projection", projection);
         cubeShader.setMat3("normalMat", normalMat);
 
-        cubeShader.setVec3("lightPos", lightPos);
+        // orbit lights around origin on tilted planes
+        glm::vec3 basePos;
+        basePos.x = sin(glfwGetTime() * 2) * lightOrbitRadius;
+        basePos.y = 0.0f;
+        basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
+        glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
+        lightPositions[0] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 
+        basePos.x = sin((glfwGetTime()  + 2 )* 2) * lightOrbitRadius;
+        basePos.y = 0.0f;
+        basePos.z = cos((glfwGetTime()  + 2) * 2) * lightOrbitRadius;
+        tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
+        lightPositions[1] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+
+        cubeShader.setVec3("pointLights[0].position", lightPositions[0]);
+        cubeShader.setVec3("pointLights[1].position", lightPositions[1]);
+
+
+        // change color of spot light
         glm::vec3 lightColor = glm::vec3(1.0f);
-       /* lightColor.x = sin(glfwGetTime() * 2.0f);
+        /*lightColor.x = sin(glfwGetTime() * 2.0f);
         lightColor.y = sin(glfwGetTime() * 0.7f);
         lightColor.z = sin(glfwGetTime() * 1.3f);*/
 
         glm::vec3 diffuseColor = lightColor * glm::vec3(0.5f);
         glm::vec3 ambientColor = diffuseColor * glm::vec3(0.2f);
 
-        cubeShader.setVec3("light.ambient", ambientColor);
-        cubeShader.setVec3("light.diffuse", diffuseColor);
+        cubeShader.setVec3("spotLight.ambient", ambientColor);
+        cubeShader.setVec3("spotLight.diffuse", diffuseColor);
+        cubeShader.setBool("enableFlashLight", enableFlashLight);
+
+        // update position/direction of spotlight to follow the camera
+        cubeShader.setVec3("spotLight.position", camera.position);
+        cubeShader.setVec3("spotLight.direction", camera.front);
 
         // bind diffuse map
         glActiveTexture(GL_TEXTURE0);
@@ -279,8 +344,8 @@ int main() {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, specularMap);
         // bind emission map
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, emissionMap);
+        /*glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, emissionMap);*/
 
 
         glBindVertexArray(cubeVAO);
@@ -291,27 +356,20 @@ int main() {
         //-------------------light shader--------------------------------
         lightShader.use();
         
-        glm::vec3 basePos;
-        basePos.x = sin(glfwGetTime() * 2) * lightOrbitRadius;
-        basePos.y = 0.0f;
-        basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
+        // loop through all point lights and draw them
+        for (int i = 0; i < lightPositions.size(); i++) {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, lightPositions[i]);
+            model = glm::scale(model, glm::vec3(0.2f));
 
-        glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f))); 
-        lightPos = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+            lightShader.setMat4("model", model);
+            lightShader.setMat4("view", view);
+            lightShader.setMat4("projection", projection);
+            lightShader.setVec3("lightColor", lightColors[i]);
 
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.2f));
-
-        
-        lightShader.setMat4("model", model);
-        lightShader.setMat4("view", view);
-        lightShader.setMat4("projection", projection);
-        lightShader.setVec3("lightColor", lightColor);
-
-
-        glBindVertexArray(lightVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(lightVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         // check for/call events and then swap buffers
         glfwPollEvents();
@@ -340,6 +398,14 @@ void processInput(GLFWwindow* window)
         camera.processKeyboard(Camera::Camera_Movement::UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         camera.processKeyboard(Camera::Camera_Movement::DOWN, deltaTime);
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_F && action == GLFW_PRESS)
+    {
+        enableFlashLight = !enableFlashLight;
+    }
 }
 
 // callback function when window is resized
@@ -479,3 +545,4 @@ GLuint loadTexture(char const* path) {
     stbi_image_free(data);
     return textureID;
 }
+
