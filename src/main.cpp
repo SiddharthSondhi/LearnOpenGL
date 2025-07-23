@@ -310,9 +310,9 @@ int main() {
         glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
         lightPositions[0] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 
-        basePos.x = sin((glfwGetTime()  + 2 )* 2) * lightOrbitRadius;
+        basePos.x = sin((glfwGetTime()  + 2.14)* 2) * lightOrbitRadius;
         basePos.y = 0.0f;
-        basePos.z = cos((glfwGetTime()  + 2) * 2) * lightOrbitRadius;
+        basePos.z = cos((glfwGetTime()  + 2.14) * 2) * lightOrbitRadius;
         tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
         lightPositions[1] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 
