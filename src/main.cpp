@@ -12,6 +12,7 @@
 
 #include "Shader.h"
 #include "Camera.h"
+#include "Model.h"
 
 
 // function prototypes
@@ -81,6 +82,7 @@ int main() {
     //Shader simpleShader("./shaders/simpleVertexShader.glsl", "./shaders/simpleFragmentShader.glsl");
     Shader cubeShader("./shaders/cubeVertexShader.glsl", "./shaders/cubeFragmentShader.glsl");
     Shader lightShader("./shaders/lightVertexShader.glsl", "./shaders/lightFragmentShader.glsl");
+    Shader modelShader("./shaders/modelVertexShader.glsl", "./shaders/modelFragmentShader.glsl");
 
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++VERTEX DATA++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -217,9 +219,9 @@ int main() {
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     // load textures
-    GLuint diffuseMap = loadTexture("./textures/container2.png");
-    GLuint specularMap = loadTexture("./textures/container2_specular.png");
-    GLuint emissionMap = loadTexture("./textures/container2_emission.png");
+    GLuint diffuseMap = loadTexture("./resources/textures/container2.png");
+    GLuint specularMap = loadTexture("./resources/textures/container2_specular.png");
+    GLuint emissionMap = loadTexture("./resources/textures/container2_emission.png");
 
     // material properties
     cubeShader.use();
@@ -260,6 +262,10 @@ int main() {
     cubeShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
     cubeShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
+    // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
+    stbi_set_flip_vertically_on_load(true);
+    Model backpackModel("./resources/models/backpack/backpack.obj");
+
 
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
@@ -268,7 +274,7 @@ int main() {
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    float lightOrbitRadius = 1.5f;
+    float lightOrbitRadius = 5.0f;
 
 
     while (!glfwWindowShouldClose(window))
@@ -284,7 +290,7 @@ int main() {
 
         // -------------------------rendering--------------------------
         //clear screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
 
@@ -349,9 +355,23 @@ int main() {
 
 
         glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        //glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        drawManyCubes(cubeShader);
+        //drawManyCubes(cubeShader);
+
+        //-------------------model shader--------------------------------
+        // view/projection transformations
+        projection = glm::perspective(glm::radians(camera.zoom), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+        view = camera.getViewMatrix();
+        modelShader.setMat4("projection", projection);
+        modelShader.setMat4("view", view);
+
+        // render the loaded model
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+        modelShader.setMat4("model", model);
+        backpackModel.draw(modelShader);
 
         //-------------------light shader--------------------------------
         lightShader.use();

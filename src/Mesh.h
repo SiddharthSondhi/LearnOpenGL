@@ -2,9 +2,6 @@
 
 #include <glad/glad.h>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 #include <string>
 #include <vector>
 
@@ -19,6 +16,7 @@ struct Vertex {
 
 struct Texture {
     GLuint id;
+    std::string path;
     std::string type;
 };
 
