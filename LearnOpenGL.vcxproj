@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(WindowsSDK_IncludePath);$(VC_IncludePath);C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include</IncludePath>
-    <LibraryPath>C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\libs;$(WindowsSDK_LibraryPath_x64);$(VC_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\libs\debug;$(WindowsSDK_LibraryPath_x64);$(VC_LibraryPath_x64)</LibraryPath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
@@ -80,7 +80,7 @@
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
     <IncludePath>$(WindowsSDK_IncludePath);$(VC_IncludePath);C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include</IncludePath>
-    <LibraryPath>C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\libs;$(WindowsSDK_LibraryPath_x64);$(VC_LibraryPath_x64)</LibraryPath>
+    <LibraryPath>C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\libs\release;$(WindowsSDK_LibraryPath_x64);$(VC_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -116,6 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,12 +132,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -158,12 +161,10 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="resources\models\backpack\backpack.mtl" />
-    <None Include="shaders\cubeFragmentShader.glsl" />
-    <None Include="shaders\cubeVertexShader.glsl" />
+    <None Include="shaders\objectFragmentShader.glsl" />
+    <None Include="shaders\objectVertexShader.glsl" />
     <None Include="shaders\lightFragmentShader.glsl" />
     <None Include="shaders\lightVertexShader.glsl" />
-    <None Include="shaders\modelFragmentShader.glsl" />
-    <None Include="shaders\modelVertexShader.glsl" />
     <None Include="shaders\simpleFragmentShader.glsl" />
     <None Include="shaders\simpleVertexShader.glsl" />
   </ItemGroup>
@@ -184,6 +185,7 @@
     <Resource Include="resources\models\backpack\backpack.obj">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </Resource>
   </ItemGroup>
   <ItemGroup>

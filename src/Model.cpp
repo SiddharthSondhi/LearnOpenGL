@@ -1,6 +1,5 @@
 #include "Model.h"
 
-unsigned int textureFromFile(const char* path, const std::string& directory);
 
 Model::Model(std::string path) {
     loadModel(path);
@@ -118,8 +117,7 @@ void Model::draw(Shader& shader) {
     }
 }
 
-GLuint textureFromFile(const char* path, const std::string& directory)
-{
+GLuint textureFromFile(const char* path, const std::string& directory){
     std::string filename = std::string(path);
     filename = directory + '/' + filename;
 
