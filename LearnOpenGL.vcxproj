@@ -145,28 +145,37 @@
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="src\glad.c" />
-    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Model.cpp" />
+    <ClCompile Include="src\Object.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\stb_image.cpp" />
+    <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
+    <ClInclude Include="src\Object.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\stb_image.h" />
+    <ClInclude Include="src\Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="resources\models\backpack\backpack.mtl" />
-    <None Include="shaders\objectFragmentShader.glsl" />
-    <None Include="shaders\objectVertexShader.glsl" />
-    <None Include="shaders\lightFragmentShader.glsl" />
-    <None Include="shaders\lightVertexShader.glsl" />
-    <None Include="shaders\simpleFragmentShader.glsl" />
-    <None Include="shaders\simpleVertexShader.glsl" />
+    <None Include="shaders\depthTestFS.glsl" />
+    <None Include="shaders\depthTestVS.glsl" />
+    <None Include="shaders\objectFS.glsl" />
+    <None Include="shaders\objectVS.glsl" />
+    <None Include="shaders\lightFS.glsl" />
+    <None Include="shaders\lightVS.glsl" />
+    <None Include="shaders\simpleFS.glsl" />
+    <None Include="shaders\simpleVS.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\models\backpack\ao.jpg" />
@@ -179,6 +188,8 @@
     <Image Include="resources\textures\container2.png" />
     <Image Include="resources\textures\container2_emission.png" />
     <Image Include="resources\textures\container2_specular.png" />
+    <Image Include="resources\textures\marble.jpg" />
+    <Image Include="resources\textures\metal.png" />
     <Image Include="resources\textures\wall.jpg" />
   </ItemGroup>
   <ItemGroup>

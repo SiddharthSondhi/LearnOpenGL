@@ -32,4 +32,3 @@ public:
     void draw(Shader& shader);
 };
 
-GLuint textureFromFile(const char* path, const std::string& directory);

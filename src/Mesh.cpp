@@ -35,6 +35,8 @@ void Mesh::setupMesh() {
 }
 
 void Mesh::draw(Shader& shader) {
+	shader.use();
+
 	unsigned int diffuseNr = 1;
 	unsigned int specularNr = 1;
 

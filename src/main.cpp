@@ -13,6 +13,8 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
+#include "Utils.h"
+#include "Object.h"
 
 
 // function prototypes
@@ -22,11 +24,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-std::tuple<GLuint, GLuint, std::vector<glm::vec3>> setUpCubes();
-void drawCubes(Shader& shader, GLuint VAO, GLuint diffuse, GLuint specular, std::vector<glm::vec3>& cubePositions);
-GLuint setUpLights(GLuint VBO);
-
-float randomFloat(float min, float max);
+void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Object& cube);
+void drawLights(Object& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors);
+void orbitLights(std::vector<glm::vec3>& lightPositions);
 
 
 // global variables
@@ -49,7 +49,6 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -78,25 +77,146 @@ int main() {
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, keyCallback);
 
-    Shader objectShader("./shaders/objectVertexShader.glsl", "./shaders/objectFragmentShader.glsl");
-    Shader lightShader("./shaders/lightVertexShader.glsl", "./shaders/lightFragmentShader.glsl");
+    std::vector<Shader*> shaders;
 
+    Shader objectShader("./shaders/objectVS.glsl", "./shaders/objectFS.glsl");
+    shaders.push_back(&objectShader);
+    Shader lightShader("./shaders/lightVS.glsl", "./shaders/lightFS.glsl");
+    shaders.push_back(&lightShader);
+    Shader depthShader("./shaders/depthTestVS.glsl", "./shaders/depthTestFS.glsl");
+    shaders.push_back(&depthShader);
+    Shader simpleShader("./shaders/simpleVS.glsl", "./shaders/simpleFS.glsl");
+    shaders.push_back(&simpleShader);
 
-    // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++++ VERTEX DATA ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    
+    std::vector<float> verticesCube = {
+        // positions          // normals           // texture coords
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
-    // load textures
-    GLuint cubeDiffuseMap = textureFromFile("container2.png", "./resources/textures");
-    GLuint cubeSpecularMap = textureFromFile("container2_specular.png", "./resources/textures");
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
+    };
+
+    std::vector<float> verticesCubeNoNorms = {
+        // positions          // texture Coords
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    };
+
+    std::vector<float> verticesPlane = {
+        // positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
+         5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+        -5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
+        -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+
+         5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
+        -5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
+         5.0f, -0.5f, -5.0f,  2.0f, 2.0f
+    };
 
     std::vector<glm::vec3> lightPositions = {
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f, 3.0f, -5.0f)
+    glm::vec3(0.0f),
+    glm::vec3(1.0f, 3.0f, -5.0f)
     };
 
     std::vector<glm::vec3> lightColors = {
         glm::vec3(1.0f, 0.3f, 0.3f),
         glm::vec3(0.3f, 0.3f, 1.0f)
     };
+
+    std::vector<glm::vec3> cubePositions;
+    const float SPAWN_SIZE = 50;
+    for (int i = 0; i < 500; i++) {
+        cubePositions.push_back(glm::vec3(Utils::randomFloat(-SPAWN_SIZE, SPAWN_SIZE), Utils::randomFloat(-SPAWN_SIZE, SPAWN_SIZE), Utils::randomFloat(-SPAWN_SIZE, SPAWN_SIZE)));
+    }
+
+
+    // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+    // load textures
+    GLuint container2DiffuseMap = Utils::textureFromFile("container2.png", "./resources/textures");
+    GLuint container2SpecularMap = Utils::textureFromFile("container2_specular.png", "./resources/textures");
+    GLuint marbleDiffuseMap = Utils::textureFromFile("marble.jpg", "./resources/textures");
+    GLuint metalDiffuseMap = Utils::textureFromFile("metal.png", "./resources/textures");
+
+
     
 
     // material properties
@@ -134,19 +254,21 @@ int main() {
     objectShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
     objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
-    // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
     stbi_set_flip_vertically_on_load(true);
     Model backpackModel("./resources/models/backpack/backpack.obj");
-    
-    auto [cubeVAO, cubeVBO, cubePositions] = setUpCubes();
-    GLuint lightVAO = setUpLights(cubeVBO);
+
+    Object cubeContainer2(verticesCube, {3, 3, 2}, container2DiffuseMap, container2SpecularMap);
+    Object cubeMarble(verticesCubeNoNorms, { 3, 2 }, marbleDiffuseMap, 0);
+    Object light(verticesCube, { 3, 3, 2 }, 0, 0);
+    Object metalPlane(verticesPlane, { 3, 2 }, metalDiffuseMap, 0);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_STENCIL_TEST);
+
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    float lightOrbitRadius = 2.2f;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -159,26 +281,27 @@ int main() {
         processInput(window);
 
         //clear screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-       
-
-        //-------------------object shader--------------------------------
-        objectShader.use();
 
         //calculate matrices
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); 
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f) * 0.6f);	
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
         glm::mat3 normalMat = glm::transpose(glm::inverse(view * model));
 
-        //update uniform values
-        objectShader.setMat4("model", model);
-        objectShader.setMat4("view", view);
-        objectShader.setMat4("projection", projection);
-        objectShader.setMat3("normalMat", normalMat);
+        //update transformation matrix values for all shaders
+        for (auto shader : shaders) {
+            shader->use();
+
+            shader->setMat4("model", model);
+            shader->setMat4("view", view);
+            shader->setMat4("projection", projection);
+            shader->setMat3("normalMat", normalMat);
+        }
+
+        // object shader specific uniforms
+        objectShader.use();
         objectShader.setBool("enableFlashLight", enableFlashLight);
 
         // update position/direction of spotlight to follow the camera
@@ -186,55 +309,32 @@ int main() {
         objectShader.setVec3("spotLight.direction", camera.front);
 
         // orbit lights around origin on tilted planes
-        glm::vec3 basePos;
-        basePos.x = sin(glfwGetTime() * 2) * lightOrbitRadius;
-        basePos.y = 0.0f;
-        basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
-        glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
-        lightPositions[0] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
-
-        basePos.x = sin((glfwGetTime()  + 2.14)* 2) * lightOrbitRadius;
-        basePos.y = 0.0f;
-        basePos.z = cos((glfwGetTime()  + 2.14) * 2) * lightOrbitRadius;
-        tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
-        lightPositions[1] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+        orbitLights(lightPositions);
 
         objectShader.setVec3("pointLights[0].position", lightPositions[0]);
         objectShader.setVec3("pointLights[1].position", lightPositions[1]);
 
-        backpackModel.draw(objectShader);
-        drawCubes(objectShader, cubeVAO, cubeDiffuseMap, cubeSpecularMap, cubePositions);
-
-        //-------------------light shader-----------------------------------
-        lightShader.use();
+        //backpackModel.draw(depthShader);
+        cubeMarble.draw(simpleShader);
         
-        // loop through all point lights and draw them
-        for (int i = 0; i < lightPositions.size(); i++) {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, lightPositions[i]);
-            model = glm::scale(model, glm::vec3(0.2f));
+        model = glm::translate(model, glm::vec3(2.5f, 0.0f, -2.0f));
+        simpleShader.setMat4("model", model);
+        cubeMarble.draw(simpleShader);
 
-            lightShader.setMat4("model", model);
-            lightShader.setMat4("view", view);
-            lightShader.setMat4("projection", projection);
-            lightShader.setVec3("lightColor", lightColors[i]);
-
-            glBindVertexArray(lightVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+        metalPlane.draw(simpleShader);
+        //drawCubes(objectShader, cubePositions, cubeContainer2);        
+        //drawLights(light, lightShader, lightPositions, lightColors);
 
         // check for/call events and then swap buffers
         glfwPollEvents();
         glfwSwapBuffers(window);
     }
-
     glfwTerminate();
 }
 
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-// ---------------------------------------Call back functions----------------------------------------
 void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -294,113 +394,9 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
     camera.processMouseScroll(yoffset);
 }
 
-// ------------------------------------- utility functions ----------------------------------------------------
 
-std::tuple<GLuint, GLuint, std::vector<glm::vec3>> setUpCubes() {
-    float verticesCube[] = {
-        // positions          // normals           // texture coords
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,   0.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
-    };
-
-    std::vector<glm::vec3> randomCubePositions;
-    const float SPAWN_SIZE = 50;
-    for (int i = 0; i < 500; i++) {
-        randomCubePositions.push_back(glm::vec3(randomFloat(-SPAWN_SIZE, SPAWN_SIZE), randomFloat(-SPAWN_SIZE, SPAWN_SIZE), randomFloat(-SPAWN_SIZE, SPAWN_SIZE)));
-    }
-
-    // --------cube VAO-----------
-    GLuint VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
-    glBindVertexArray(VAO);
-
-    // set up VBO
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(verticesCube), verticesCube, GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-    // texture attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-
-    return { VAO, VBO, randomCubePositions};
-}
-
-GLuint setUpLights(GLuint VBO) {
-    GLuint lightVAO;
-    glGenVertexArrays(1, &lightVAO);
-    glBindVertexArray(lightVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-    //vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    return lightVAO;
-}
-
-void drawCubes(Shader& shader, GLuint VAO, GLuint diffuse, GLuint specular, std::vector<glm::vec3>& cubePositions) {
+void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Object& cube) {
     shader.use();
-
-    glBindVertexArray(VAO);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, diffuse);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, specular);
-
-    shader.setInt("material.texture_diffuse1", 0);
-    shader.setInt("material.texture_specular1", 1);
 
     glm::mat4 view = camera.getViewMatrix();
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
@@ -417,14 +413,42 @@ void drawCubes(Shader& shader, GLuint VAO, GLuint diffuse, GLuint specular, std:
         shader.setMat3("normalMat", normalMat);
         shader.setMat4("model", model);
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        cube.draw(shader);
     }
 }
 
-float randomFloat(float min, float max) {
-    static std::mt19937 gen(1); 
-    std::uniform_real_distribution<float> dist(min, max);
-    return dist(gen);
+void orbitLights(std::vector<glm::vec3>& lightPositions) {
+    float lightOrbitRadius = 2.2f;
+
+    glm::vec3 basePos;
+    basePos.x = sin(glfwGetTime() * 2) * lightOrbitRadius;
+    basePos.y = 0.0f;
+    basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
+    glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
+    lightPositions[0] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+
+    basePos.x = sin((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
+    basePos.y = 0.0f;
+    basePos.z = cos((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
+    tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
+    lightPositions[1] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 }
 
+void drawLights(Object& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors) {
+    shader.use();
 
+    glm::mat4 model;
+
+    // loop through all point lights and draw them
+    for (int i = 0; i < lightPositions.size(); i++) {
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, lightPositions[i]);
+        model = glm::scale(model, glm::vec3(0.2f));
+
+        shader.setMat4("model", model);
+        shader.setVec3("lightColor", lightColors[i]);
+
+        light.draw(shader);
+    }
+
+}
