@@ -8,29 +8,23 @@
 #include "Shader.h"
 
 
-struct Vertex {
-    glm::vec3 position;
-    glm::vec3 normal;
-    glm::vec2 texCoords;
-};
-
 struct Texture {
     GLuint id;
-    std::string path;
     std::string type;
+    std::string path;
 };
 
 class Mesh {
 private:
     GLuint VAO, VBO, EBO;
-    void setupMesh();
-
-public:
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
+    GLsizei indicesSize;
+    GLsizei vertexCount;
     std::vector<Texture> textures;
 
-    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indeces, std::vector<Texture> textures);
+    void setUpAttributes(const std::vector<unsigned int>& attribSizes);
+
+public:
+    Mesh(const std::vector<float>& vertices, const std::vector<unsigned int>& attribSizes,const std::vector<Texture>& textures,const std::vector<unsigned int>& indices = {});
     void draw(Shader& shader);
 
 };

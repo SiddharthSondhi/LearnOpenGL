@@ -14,7 +14,6 @@
 #include "Camera.h"
 #include "Model.h"
 #include "Utils.h"
-#include "Object.h"
 
 
 // function prototypes
@@ -24,8 +23,8 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Object& cube);
-void drawLights(Object& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors);
+void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Mesh& cube);
+void drawLights(Mesh& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors);
 void orbitLights(std::vector<glm::vec3>& lightPositions);
 
 
@@ -215,8 +214,6 @@ int main() {
     GLuint container2SpecularMap = Utils::textureFromFile("container2_specular.png", "./resources/textures");
     GLuint marbleDiffuseMap = Utils::textureFromFile("marble.jpg", "./resources/textures");
     GLuint metalDiffuseMap = Utils::textureFromFile("metal.png", "./resources/textures");
-
-
     
 
     // material properties
@@ -257,14 +254,15 @@ int main() {
     stbi_set_flip_vertically_on_load(true);
     Model backpackModel("./resources/models/backpack/backpack.obj");
 
-    Object cubeContainer2(verticesCube, {3, 3, 2}, container2DiffuseMap, container2SpecularMap);
-    Object cubeMarble(verticesCubeNoNorms, { 3, 2 }, marbleDiffuseMap, 0);
-    Object light(verticesCube, { 3, 3, 2 }, 0, 0);
-    Object metalPlane(verticesPlane, { 3, 2 }, metalDiffuseMap, 0);
+    Mesh cubeContainer2(verticesCube, { 3, 3, 2 }, { {container2DiffuseMap, "texture_diffuse", ""}, {container2SpecularMap, "texture_specular", ""} });
+    Mesh cubeMarble(verticesCubeNoNorms, { 3, 2 }, { {marbleDiffuseMap, "texture_diffuse", ""} });
+    Mesh light(verticesCube, { 3, 3, 2 }, {});
+    Mesh metalPlane(verticesPlane, { 3, 2 }, { {metalDiffuseMap, "texture_diffuse", ""} });
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_STENCIL_TEST);
+    //glStencilFunc(GL_EQUAL, 1, 0xFF);
 
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -282,7 +280,7 @@ int main() {
 
         //clear screen
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         //calculate matrices
         glm::mat4 model = glm::mat4(1.0f);
@@ -314,9 +312,9 @@ int main() {
         objectShader.setVec3("pointLights[0].position", lightPositions[0]);
         objectShader.setVec3("pointLights[1].position", lightPositions[1]);
 
-        //backpackModel.draw(depthShader);
-        cubeMarble.draw(simpleShader);
+        //backpackModel.draw(objectShader);
         
+        cubeMarble.draw(simpleShader);
         model = glm::translate(model, glm::vec3(2.5f, 0.0f, -2.0f));
         simpleShader.setMat4("model", model);
         cubeMarble.draw(simpleShader);
@@ -395,7 +393,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
 }
 
 
-void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Object& cube) {
+void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Mesh& cube) {
     shader.use();
 
     glm::mat4 view = camera.getViewMatrix();
@@ -434,7 +432,7 @@ void orbitLights(std::vector<glm::vec3>& lightPositions) {
     lightPositions[1] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 }
 
-void drawLights(Object& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors) {
+void drawLights(Mesh& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors) {
     shader.use();
 
     glm::mat4 model;

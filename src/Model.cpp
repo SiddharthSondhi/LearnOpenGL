@@ -36,28 +36,32 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
 }
 
 Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
-    std::vector<Vertex> vertices;
+    std::vector<float> vertices;
     std::vector<unsigned int> indices;
     std::vector<Texture> textures;
+    std::vector<unsigned int> attribSizes{ 3, 3, 2 };
 
     // process vertices
-    for (unsigned int i = 0; i < mesh->mNumVertices; i++)
-    {
-        Vertex vertex;
+    for (unsigned int i = 0; i < mesh->mNumVertices; i++){
 
         // process vertex positions, normals and texture coordinates
-        vertex.position = glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
-        vertex.normal = glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z);
+        vertices.push_back(mesh->mVertices[i].x);
+        vertices.push_back(mesh->mVertices[i].y);
+        vertices.push_back(mesh->mVertices[i].z);
+
+        vertices.push_back(mesh->mNormals[i].x);
+        vertices.push_back(mesh->mNormals[i].y);
+        vertices.push_back(mesh->mNormals[i].z);
         
         // does the mesh contain texture coordinates?
         if (mesh->mTextureCoords[0]) {
-            vertex.texCoords = glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y);
+            vertices.push_back(mesh->mTextureCoords[0][i].x);
+            vertices.push_back(mesh->mTextureCoords[0][i].y);
         }
         else {
-            vertex.texCoords = glm::vec2(0.0f, 0.0f);
+            vertices.push_back(0.0f);
+            vertices.push_back(0.0f);
         }
-
-        vertices.push_back(vertex);
     }
 
     // process indices
@@ -79,7 +83,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
     }
 
-    return Mesh(vertices, indices, textures);
+    return Mesh(vertices, attribSizes, textures, indices);
 }
 
 std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
