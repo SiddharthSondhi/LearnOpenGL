@@ -15,6 +15,10 @@ struct Texture {
 };
 
 class Mesh {
+public:
+    Mesh(const std::vector<float>& vertices, const std::vector<unsigned int>& attribSizes,const std::vector<Texture>& textures,const std::vector<unsigned int>& indices = {});
+    void draw(Shader& shader);
+
 private:
     GLuint VAO, VBO, EBO;
     GLsizei indicesSize;
@@ -22,9 +26,5 @@ private:
     std::vector<Texture> textures;
 
     void setUpAttributes(const std::vector<unsigned int>& attribSizes);
-
-public:
-    Mesh(const std::vector<float>& vertices, const std::vector<unsigned int>& attribSizes,const std::vector<Texture>& textures,const std::vector<unsigned int>& indices = {});
-    void draw(Shader& shader);
 
 };

@@ -15,6 +15,10 @@
 
 class Model
 {
+public:
+    Model(std::string path);
+    void draw(Shader& shader);
+
 private:
     // model data
     std::vector<Mesh> meshes;
@@ -26,9 +30,5 @@ private:
     void processNode(aiNode* node, const aiScene* scene);
     Mesh processMesh(aiMesh* mesh, const aiScene* scene);
     std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName);
-
-public:
-    Model(std::string path);
-    void draw(Shader& shader);
 };
 

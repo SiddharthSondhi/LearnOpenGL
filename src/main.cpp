@@ -14,6 +14,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "Utils.h"
+#include "SceneObject.h"
 
 
 // function prototypes
@@ -23,10 +24,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Mesh& cube);
-void drawLights(Mesh& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors);
-void orbitLights(std::vector<glm::vec3>& lightPositions);
-
+void orbitLights(SceneObject& light1, SceneObject& light2);
 
 // global variables
 const unsigned int WINDOW_WIDTH = 1980;
@@ -190,11 +188,6 @@ int main() {
          5.0f, -0.5f, -5.0f,  2.0f, 2.0f
     };
 
-    std::vector<glm::vec3> lightPositions = {
-    glm::vec3(0.0f),
-    glm::vec3(1.0f, 3.0f, -5.0f)
-    };
-
     std::vector<glm::vec3> lightColors = {
         glm::vec3(1.0f, 0.3f, 0.3f),
         glm::vec3(0.3f, 0.3f, 1.0f)
@@ -251,22 +244,42 @@ int main() {
     objectShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
     objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
+
+    //meshes and models
     stbi_set_flip_vertically_on_load(true);
     Model backpackModel("./resources/models/backpack/backpack.obj");
 
     Mesh cubeContainer2(verticesCube, { 3, 3, 2 }, { {container2DiffuseMap, "texture_diffuse", ""}, {container2SpecularMap, "texture_specular", ""} });
     Mesh cubeMarble(verticesCubeNoNorms, { 3, 2 }, { {marbleDiffuseMap, "texture_diffuse", ""} });
-    Mesh light(verticesCube, { 3, 3, 2 }, {});
-    Mesh metalPlane(verticesPlane, { 3, 2 }, { {metalDiffuseMap, "texture_diffuse", ""} });
+    Mesh lightMesh(verticesCube, { 3, 3, 2 }, {});
+    Mesh plane(verticesPlane, { 3, 2 }, { {metalDiffuseMap, "texture_diffuse", ""} });
 
+
+    //scene objects
+    SceneObject backpack(&backpackModel);
+    SceneObject floor(&plane);
+
+    SceneObject cube1(&cubeMarble);
+    cube1.position = glm::vec3(-2.0f, 0, 3.0f);
+    SceneObject cube2(&cubeMarble);
+    cube2.position = glm::vec3(1.0f, 0, -2.8f);
+
+    std::vector<SceneObject> cubes;
+    for (int i = 0; i < cubePositions.size(); i++) {
+        cubes.push_back(SceneObject(&cubeContainer2));
+        cubes[i].position = cubePositions[i];
+    }
+
+    SceneObject light1(&lightMesh);
+    light1.scale = glm::vec3(0.2f);
+    SceneObject light2(&lightMesh);
+    light2.scale = glm::vec3(0.2f);
+
+
+
+    // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++    
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_STENCIL_TEST);
-    //glStencilFunc(GL_EQUAL, 1, 0xFF);
-
-
-    // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    
 
     while (!glfwWindowShouldClose(window))
     {
@@ -282,46 +295,46 @@ int main() {
         glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
+        //update positions
+        orbitLights(light1, light2);
+
         //calculate matrices
-        glm::mat4 model = glm::mat4(1.0f);
         glm::mat4 view = camera.getViewMatrix();
         glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
-        glm::mat3 normalMat = glm::transpose(glm::inverse(view * model));
 
-        //update transformation matrix values for all shaders
+        //update view and projection matrices for all shaders
         for (auto shader : shaders) {
             shader->use();
 
-            shader->setMat4("model", model);
             shader->setMat4("view", view);
             shader->setMat4("projection", projection);
-            shader->setMat3("normalMat", normalMat);
         }
 
         // object shader specific uniforms
         objectShader.use();
         objectShader.setBool("enableFlashLight", enableFlashLight);
-
-        // update position/direction of spotlight to follow the camera
         objectShader.setVec3("spotLight.position", camera.position);
         objectShader.setVec3("spotLight.direction", camera.front);
+        objectShader.setVec3("pointLights[0].position", light1.position);
+        objectShader.setVec3("pointLights[1].position", light2.position);
 
-        // orbit lights around origin on tilted planes
-        orbitLights(lightPositions);
-
-        objectShader.setVec3("pointLights[0].position", lightPositions[0]);
-        objectShader.setVec3("pointLights[1].position", lightPositions[1]);
-
-        //backpackModel.draw(objectShader);
         
-        cubeMarble.draw(simpleShader);
-        model = glm::translate(model, glm::vec3(2.5f, 0.0f, -2.0f));
-        simpleShader.setMat4("model", model);
-        cubeMarble.draw(simpleShader);
+        //render SceneObjects
+        //floor.draw(simpleShader, camera);
+        //cube1.draw(simpleShader, camera);
+        //cube2.draw(simpleShader, camera);
+        backpack.draw(objectShader, camera);
 
-        metalPlane.draw(simpleShader);
-        //drawCubes(objectShader, cubePositions, cubeContainer2);        
-        //drawLights(light, lightShader, lightPositions, lightColors);
+        for (auto cube : cubes) {
+            cube.draw(depthShader, camera);
+        }
+
+        lightShader.use();
+        lightShader.setVec3("lightColor", lightColors[0]);
+        light1.draw(lightShader, camera);
+
+        lightShader.setVec3("lightColor", lightColors[1]);
+        light2.draw(lightShader, camera);
 
         // check for/call events and then swap buffers
         glfwPollEvents();
@@ -393,60 +406,20 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
 }
 
 
-void drawCubes(Shader& shader, std::vector<glm::vec3>& cubePositions, Mesh& cube) {
-    shader.use();
-
-    glm::mat4 view = camera.getViewMatrix();
-    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
-
-    shader.setMat4("view", view);
-    shader.setMat4("projection", projection);
-
-    for (unsigned int i = 0; i < cubePositions.size(); i++){
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, cubePositions[i]);
-
-        glm::mat3 normalMat = glm::transpose(glm::inverse(view * model));
-
-        shader.setMat3("normalMat", normalMat);
-        shader.setMat4("model", model);
-
-        cube.draw(shader);
-    }
-}
-
-void orbitLights(std::vector<glm::vec3>& lightPositions) {
-    float lightOrbitRadius = 2.2f;
+void orbitLights(SceneObject& light1, SceneObject& light2) {
+    float lightOrbitRadius = 3.5f;
 
     glm::vec3 basePos;
     basePos.x = sin(glfwGetTime() * 2) * lightOrbitRadius;
     basePos.y = 0.0f;
     basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
     glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
-    lightPositions[0] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+    light1.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 
     basePos.x = sin((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
     basePos.y = 0.0f;
     basePos.z = cos((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
     tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
-    lightPositions[1] = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+    light2.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
 }
 
-void drawLights(Mesh& light, Shader& shader, std::vector<glm::vec3>& lightPositions, std::vector<glm::vec3>& lightColors) {
-    shader.use();
-
-    glm::mat4 model;
-
-    // loop through all point lights and draw them
-    for (int i = 0; i < lightPositions.size(); i++) {
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPositions[i]);
-        model = glm::scale(model, glm::vec3(0.2f));
-
-        shader.setMat4("model", model);
-        shader.setVec3("lightColor", lightColors[i]);
-
-        light.draw(shader);
-    }
-
-}

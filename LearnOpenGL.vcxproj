@@ -151,6 +151,7 @@
     </ClCompile>
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Model.cpp" />
+    <ClCompile Include="src\SceneObject.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\stb_image.cpp" />
     <ClCompile Include="src\Utils.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\Model.h" />
+    <ClInclude Include="src\SceneObject.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\Utils.h" />
@@ -174,6 +176,7 @@
     <None Include="shaders\lightVS.glsl" />
     <None Include="shaders\simpleFS.glsl" />
     <None Include="shaders\simpleVS.glsl" />
+    <None Include="shaders\singleColorFS.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\models\backpack\ao.jpg" />
