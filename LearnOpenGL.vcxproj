@@ -185,10 +185,12 @@
     <Image Include="resources\models\backpack\roughness.jpg" />
     <Image Include="resources\models\backpack\specular.jpg" />
     <Image Include="resources\textures\awesomeface.png" />
+    <Image Include="resources\textures\blending_transparent_window.png" />
     <Image Include="resources\textures\container.jpg" />
     <Image Include="resources\textures\container2.png" />
     <Image Include="resources\textures\container2_emission.png" />
     <Image Include="resources\textures\container2_specular.png" />
+    <Image Include="resources\textures\grass.png" />
     <Image Include="resources\textures\marble.jpg" />
     <Image Include="resources\textures\metal.png" />
     <Image Include="resources\textures\wall.jpg" />

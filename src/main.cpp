@@ -2,13 +2,16 @@
 #include <GLFW/glfw3.h>
 #include "stb_image.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/norm.hpp>
 
 #include <iostream>
 #include <random>
 #include <vector>
+#include <map>
 
 #include "Shader.h"
 #include "Camera.h"
@@ -84,6 +87,8 @@ int main() {
     shaders.push_back(&depthShader);
     Shader simpleShader("./shaders/simpleVS.glsl", "./shaders/simpleFS.glsl");
     shaders.push_back(&simpleShader);
+    Shader singleColorShader("./shaders/simpleVS.glsl", "./shaders/singleColorFS.glsl");
+    shaders.push_back(&singleColorShader);
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++ VERTEX DATA ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
@@ -188,6 +193,18 @@ int main() {
          5.0f, -0.5f, -5.0f,  2.0f, 2.0f
     };
 
+    std::vector<float> transparentVertices = {
+        // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+        0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+        1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+        1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+
+
     std::vector<glm::vec3> lightColors = {
         glm::vec3(1.0f, 0.3f, 0.3f),
         glm::vec3(0.3f, 0.3f, 1.0f)
@@ -199,6 +216,20 @@ int main() {
         cubePositions.push_back(glm::vec3(Utils::randomFloat(-SPAWN_SIZE, SPAWN_SIZE), Utils::randomFloat(-SPAWN_SIZE, SPAWN_SIZE), Utils::randomFloat(-SPAWN_SIZE, SPAWN_SIZE)));
     }
 
+    std::vector<glm::vec3> grassPositions;
+    grassPositions.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
+    grassPositions.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
+    grassPositions.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
+    grassPositions.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
+    grassPositions.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
+
+    std::vector<glm::vec3> windowPositions;
+    windowPositions.push_back(glm::vec3(-0.5f, 0.0f, -0.48f));
+    windowPositions.push_back(glm::vec3(2.5f, 0.0f, 0.51f));
+    windowPositions.push_back(glm::vec3(1.0f, 0.0f, 0.7f));
+    windowPositions.push_back(glm::vec3(0.7f, 0.0f, -2.3f));
+    windowPositions.push_back(glm::vec3(1.5f, 0.0f, -0.6f));
+
 
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -207,6 +238,8 @@ int main() {
     GLuint container2SpecularMap = Utils::textureFromFile("container2_specular.png", "./resources/textures");
     GLuint marbleDiffuseMap = Utils::textureFromFile("marble.jpg", "./resources/textures");
     GLuint metalDiffuseMap = Utils::textureFromFile("metal.png", "./resources/textures");
+    GLuint grassDiffuseMap = Utils::textureFromFile("grass.png", "./resources/textures");
+    GLuint redWindowDiffMap = Utils::textureFromFile("blending_transparent_window.png", "./resources/textures");
     
 
     // material properties
@@ -253,6 +286,8 @@ int main() {
     Mesh cubeMarble(verticesCubeNoNorms, { 3, 2 }, { {marbleDiffuseMap, "texture_diffuse", ""} });
     Mesh lightMesh(verticesCube, { 3, 3, 2 }, {});
     Mesh plane(verticesPlane, { 3, 2 }, { {metalDiffuseMap, "texture_diffuse", ""} });
+    Mesh grassQuad(transparentVertices, { 3, 2 }, { {grassDiffuseMap, "texture_diffuse", ""} });
+    Mesh windowQuad(transparentVertices, { 3, 2 }, { {redWindowDiffMap, "texture_diffuse", ""} });
 
 
     //scene objects
@@ -262,7 +297,7 @@ int main() {
     SceneObject cube1(&cubeMarble);
     cube1.position = glm::vec3(-2.0f, 0, 3.0f);
     SceneObject cube2(&cubeMarble);
-    cube2.position = glm::vec3(1.0f, 0, -2.8f);
+    cube2.position = glm::vec3(-1.4f, 0, -2.8f);
 
     std::vector<SceneObject> cubes;
     for (int i = 0; i < cubePositions.size(); i++) {
@@ -276,10 +311,28 @@ int main() {
     light2.scale = glm::vec3(0.2f);
 
 
+    std::vector<SceneObject> vegetation;
+    for (int i = 0; i < grassPositions.size(); i++) {
+        vegetation.push_back(SceneObject(&grassQuad));
+        vegetation[i].position = grassPositions[i];
+    }
+
+    std::map<float, SceneObject> sortedTransparentObjects;
+    for (int i = 0; i < windowPositions.size(); i++) {
+        float distSqrd = glm::length2(camera.position - windowPositions[i]);
+        SceneObject obj(&windowQuad);
+        obj.position = windowPositions[i];
+        sortedTransparentObjects.emplace(distSqrd, obj);
+    }
+
+
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++    
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     while (!glfwWindowShouldClose(window))
     {
@@ -318,23 +371,37 @@ int main() {
         objectShader.setVec3("pointLights[0].position", light1.position);
         objectShader.setVec3("pointLights[1].position", light2.position);
 
-        
         //render SceneObjects
-        //floor.draw(simpleShader, camera);
-        //cube1.draw(simpleShader, camera);
-        //cube2.draw(simpleShader, camera);
-        backpack.draw(objectShader, camera);
+        floor.draw(simpleShader, camera);
 
-        for (auto cube : cubes) {
+        cube1.draw(simpleShader, camera);
+        cube2.draw(simpleShader, camera);
+
+
+        //backpack.draw(objectShader, camera);
+
+        /*for (auto cube : cubes) {
             cube.draw(depthShader, camera);
-        }
+        }*/
 
-        lightShader.use();
+        /*lightShader.use();
         lightShader.setVec3("lightColor", lightColors[0]);
         light1.draw(lightShader, camera);
 
         lightShader.setVec3("lightColor", lightColors[1]);
-        light2.draw(lightShader, camera);
+        light2.draw(lightShader, camera);*/
+
+
+        //render transparent objects from farthest to nearest distance from Camera
+        for (auto grass : vegetation) {
+            grass.draw(simpleShader, camera);
+        }
+
+        for (std::map<float, SceneObject>::reverse_iterator it = sortedTransparentObjects.rbegin(); it != sortedTransparentObjects.rend(); it++) {
+            it->second.draw(simpleShader, camera);
+        }
+
+
 
         // check for/call events and then swap buffers
         glfwPollEvents();
