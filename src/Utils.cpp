@@ -1,5 +1,6 @@
+#include <stb_image/stb_image.h>
+
 #include "Utils.h"
-#include "stb_image.h"
 
 namespace Utils {
 

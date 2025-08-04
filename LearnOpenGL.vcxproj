@@ -71,7 +71,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(WindowsSDK_IncludePath);$(VC_IncludePath);C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include</IncludePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(VC_IncludePath);C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include\imgui;C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include</IncludePath>
     <LibraryPath>C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\libs\debug;$(WindowsSDK_LibraryPath_x64);$(VC_LibraryPath_x64)</LibraryPath>
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
@@ -79,7 +79,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\build\intermediate\$(Platform)\$(Configuration)\</IntDir>
-    <IncludePath>$(WindowsSDK_IncludePath);$(VC_IncludePath);C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include</IncludePath>
+    <IncludePath>$(WindowsSDK_IncludePath);$(VC_IncludePath);C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include\imgui;C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\include</IncludePath>
     <LibraryPath>C:\Users\siddh\Desktop\files\Programming\LearnOpenGL\libs\release;$(WindowsSDK_LibraryPath_x64);$(VC_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -144,7 +144,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp" />
-    <ClCompile Include="src\glad.c" />
+    <ClCompile Include="src\glad\glad.c" />
+    <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\imgui\imgui.cpp" />
+    <ClCompile Include="src\imgui\imgui_demo.cpp" />
+    <ClCompile Include="src\imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
@@ -153,23 +160,33 @@
     <ClCompile Include="src\Model.cpp" />
     <ClCompile Include="src\SceneObject.cpp" />
     <ClCompile Include="src\Shader.cpp" />
-    <ClCompile Include="src\stb_image.cpp" />
+    <ClCompile Include="src\stb_image\stb_image.cpp" />
     <ClCompile Include="src\Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Camera.h" />
-    <ClInclude Include="src\Mesh.h" />
-    <ClInclude Include="src\Model.h" />
-    <ClInclude Include="src\SceneObject.h" />
-    <ClInclude Include="src\Shader.h" />
-    <ClInclude Include="src\stb_image.h" />
-    <ClInclude Include="src\Utils.h" />
+    <ClInclude Include="include\Camera.h" />
+    <ClInclude Include="include\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="include\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="include\imgui\imconfig.h" />
+    <ClInclude Include="include\imgui\imgui.h" />
+    <ClInclude Include="include\imgui\imgui_internal.h" />
+    <ClInclude Include="include\imgui\imstb_rectpack.h" />
+    <ClInclude Include="include\imgui\imstb_textedit.h" />
+    <ClInclude Include="include\imgui\imstb_truetype.h" />
+    <ClInclude Include="include\Mesh.h" />
+    <ClInclude Include="include\Model.h" />
+    <ClInclude Include="include\SceneObject.h" />
+    <ClInclude Include="include\Shader.h" />
+    <ClInclude Include="include\stb_image\stb_image.h" />
+    <ClInclude Include="include\Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="resources\models\backpack\backpack.mtl" />
     <None Include="shaders\depthTestFS.glsl" />
     <None Include="shaders\depthTestVS.glsl" />
+    <None Include="shaders\frameBufferVS.glsl" />
+    <None Include="shaders\frameBufferFS.glsl" />
     <None Include="shaders\objectFS.glsl" />
     <None Include="shaders\objectVS.glsl" />
     <None Include="shaders\lightFS.glsl" />

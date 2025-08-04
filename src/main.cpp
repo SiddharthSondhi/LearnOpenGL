@@ -1,6 +1,6 @@
 #include <glad/glad.h> 
 #include <GLFW/glfw3.h>
-#include "stb_image.h"
+#include <stb_image/stb_image.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
@@ -89,6 +89,7 @@ int main() {
     shaders.push_back(&simpleShader);
     Shader singleColorShader("./shaders/simpleVS.glsl", "./shaders/singleColorFS.glsl");
     shaders.push_back(&singleColorShader);
+    Shader frameBufferShader("./shaders/frameBufferVS.glsl", "./shaders/frameBufferFS.glsl");
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++ VERTEX DATA ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
@@ -138,48 +139,48 @@ int main() {
     };
 
     std::vector<float> verticesCubeNoNorms = {
-        // positions          // texture Coords
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        // Back face
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // Bottom-left
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right         
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+        // Front face
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+        // Left face
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+        // Right face
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right         
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left     
+         // Bottom face
+         -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+          0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
+          0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+          0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+         -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+         -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+         // Top face
+         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+          0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+          0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right     
+          0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+         -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+         -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left        
     };
 
     std::vector<float> verticesPlane = {
@@ -204,10 +205,21 @@ int main() {
         1.0f,  0.5f,  0.0f,  1.0f,  0.0f
     };
 
+    std::vector<float> quadVertices = {
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
 
     std::vector<glm::vec3> lightColors = {
-        glm::vec3(1.0f, 0.3f, 0.3f),
-        glm::vec3(0.3f, 0.3f, 1.0f)
+        glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f)
     };
 
     std::vector<glm::vec3> cubePositions;
@@ -230,6 +242,33 @@ int main() {
     windowPositions.push_back(glm::vec3(0.7f, 0.0f, -2.3f));
     windowPositions.push_back(glm::vec3(1.5f, 0.0f, -0.6f));
 
+    unsigned int framebuffer;
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+    // generate texture
+    unsigned int textureColorbuffer;
+    glGenTextures(1, &textureColorbuffer);
+    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // attach it to currently bound framebuffer object
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+
+    unsigned int rbo;
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WINDOW_WIDTH, WINDOW_HEIGHT);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -254,23 +293,23 @@ int main() {
 
     // point lights
     objectShader.setFloat("pointLights[0].constant", 1.0f);
-    objectShader.setFloat("pointLights[0].linear", 0.022);
-    objectShader.setFloat("pointLights[0].quadratic", 0.0019);
+    objectShader.setFloat("pointLights[0].linear", 0.022f);
+    objectShader.setFloat("pointLights[0].quadratic", 0.0019f);
     objectShader.setVec3("pointLights[0].ambient", lightColors[0] * 0.1f);
     objectShader.setVec3("pointLights[0].diffuse", lightColors[0]);
     objectShader.setVec3("pointLights[0].specular", lightColors[0]);
 
     objectShader.setFloat("pointLights[1].constant", 1.0f);
-    objectShader.setFloat("pointLights[1].linear", 0.022);
-    objectShader.setFloat("pointLights[1].quadratic", 0.0019);
+    objectShader.setFloat("pointLights[1].linear", 0.022f);
+    objectShader.setFloat("pointLights[1].quadratic", 0.0019f);
     objectShader.setVec3("pointLights[1].ambient", lightColors[1] * 0.1f);
     objectShader.setVec3("pointLights[1].diffuse", lightColors[1]);
     objectShader.setVec3("pointLights[1].specular", lightColors[1]);
 
     // spot light
     objectShader.setFloat("spotLight.constant", 1.0f);
-    objectShader.setFloat("spotLight.linear", 0.022);
-    objectShader.setFloat("spotLight.quadratic", 0.0019);
+    objectShader.setFloat("spotLight.linear", 0.022f);
+    objectShader.setFloat("spotLight.quadratic", 0.0019f);
     objectShader.setVec3("spotLight.ambient", 0.2f, 0.2f, 0.2f);
     objectShader.setVec3("spotLight.diffuse", 0.5f, 0.5f, 0.5f);
     objectShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
@@ -288,16 +327,18 @@ int main() {
     Mesh plane(verticesPlane, { 3, 2 }, { {metalDiffuseMap, "texture_diffuse", ""} });
     Mesh grassQuad(transparentVertices, { 3, 2 }, { {grassDiffuseMap, "texture_diffuse", ""} });
     Mesh windowQuad(transparentVertices, { 3, 2 }, { {redWindowDiffMap, "texture_diffuse", ""} });
+    Mesh frameBufferQuadMesh(quadVertices, { 2, 2 }, { {textureColorbuffer, "texture_diffuse", ""} });
 
 
     //scene objects
     SceneObject backpack(&backpackModel);
+    backpack.position = glm::vec3(0.0f, 8.0f, 0.0f);
     SceneObject floor(&plane);
 
     SceneObject cube1(&cubeMarble);
-    cube1.position = glm::vec3(-2.0f, 0, 3.0f);
+    cube1.position = glm::vec3(-2.0f, 0.01, 3.0f);
     SceneObject cube2(&cubeMarble);
-    cube2.position = glm::vec3(-1.4f, 0, -2.8f);
+    cube2.position = glm::vec3(-1.4f, 0.01, -2.8f);
 
     std::vector<SceneObject> cubes;
     for (int i = 0; i < cubePositions.size(); i++) {
@@ -317,13 +358,15 @@ int main() {
         vegetation[i].position = grassPositions[i];
     }
 
-    std::map<float, SceneObject> sortedTransparentObjects;
+
+    std::vector<SceneObject> transparentObjects;
     for (int i = 0; i < windowPositions.size(); i++) {
-        float distSqrd = glm::length2(camera.position - windowPositions[i]);
         SceneObject obj(&windowQuad);
         obj.position = windowPositions[i];
-        sortedTransparentObjects.emplace(distSqrd, obj);
+        transparentObjects.push_back(obj);
     }
+
+    SceneObject frameBufferQuad(&frameBufferQuadMesh);
 
 
 
@@ -332,6 +375,7 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glEnable(GL_CULL_FACE);
 
 
     while (!glfwWindowShouldClose(window))
@@ -344,12 +388,15 @@ int main() {
         // input
         processInput(window);
 
-        //clear screen
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
 
         //update positions
         orbitLights(light1, light2);
+
+        //sort transparent (partially or requiring blending) objects in descending dist from camera
+        std::sort(transparentObjects.begin(), transparentObjects.end(), [](const SceneObject& obj1, const SceneObject& obj2) {
+            return glm::length2(camera.position - obj1.position) > glm::length2(camera.position - obj2.position);
+        });
 
         //calculate matrices
         glm::mat4 view = camera.getViewMatrix();
@@ -371,6 +418,15 @@ int main() {
         objectShader.setVec3("pointLights[0].position", light1.position);
         objectShader.setVec3("pointLights[1].position", light2.position);
 
+
+        //before rendering bind to the framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        glEnable(GL_DEPTH_TEST);
+
+        //clear screen
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
         //render SceneObjects
         floor.draw(simpleShader, camera);
 
@@ -378,30 +434,36 @@ int main() {
         cube2.draw(simpleShader, camera);
 
 
-        //backpack.draw(objectShader, camera);
+        backpack.draw(objectShader, camera);
 
-        /*for (auto cube : cubes) {
+        for (auto cube : cubes) {
             cube.draw(depthShader, camera);
-        }*/
+        }
 
-        /*lightShader.use();
+        lightShader.use();
         lightShader.setVec3("lightColor", lightColors[0]);
         light1.draw(lightShader, camera);
 
         lightShader.setVec3("lightColor", lightColors[1]);
-        light2.draw(lightShader, camera);*/
-
+        light2.draw(lightShader, camera);
 
         //render transparent objects from farthest to nearest distance from Camera
-        for (auto grass : vegetation) {
+        for (auto& grass : vegetation) {
             grass.draw(simpleShader, camera);
         }
 
-        for (std::map<float, SceneObject>::reverse_iterator it = sortedTransparentObjects.rbegin(); it != sortedTransparentObjects.rend(); it++) {
-            it->second.draw(simpleShader, camera);
+        for (auto& obj : transparentObjects) {
+            obj.draw(simpleShader, camera);
         }
 
+        // now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
+        // clear all relevant buffers
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+        glClear(GL_COLOR_BUFFER_BIT);
 
+        frameBufferQuad.draw(frameBufferShader, camera);
 
         // check for/call events and then swap buffers
         glfwPollEvents();
@@ -481,12 +543,12 @@ void orbitLights(SceneObject& light1, SceneObject& light2) {
     basePos.y = 0.0f;
     basePos.z = cos(glfwGetTime() * 2) * lightOrbitRadius;
     glm::mat4 tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
-    light1.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+    light1.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f)) + glm::vec3(0.0f, 8.0f, 0.0f);
 
     basePos.x = sin((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
     basePos.y = 0.0f;
     basePos.z = cos((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
     tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
-    light2.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f));
+    light2.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f)) + glm::vec3(0.0f, 8.0f, 0.0f);
 }
 

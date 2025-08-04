@@ -4,7 +4,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <glm/glm.hpp>
-#include "stb_image.h"
+#include <stb_image/stb_image.h>
 
 
 #include <string>
