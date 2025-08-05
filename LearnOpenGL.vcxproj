@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\Cubemap.cpp" />
     <ClCompile Include="src\glad\glad.c" />
     <ClCompile Include="src\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\imgui\backends\imgui_impl_opengl3.cpp" />
@@ -165,6 +166,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Camera.h" />
+    <ClInclude Include="include\Cubemap.h" />
     <ClInclude Include="include\imgui\imgui_impl_glfw.h" />
     <ClInclude Include="include\imgui\imgui_impl_opengl3.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
@@ -195,6 +197,8 @@
     <None Include="shaders\simpleFS.glsl" />
     <None Include="shaders\simpleVS.glsl" />
     <None Include="shaders\singleColorFS.glsl" />
+    <None Include="shaders\skyboxFS.glsl" />
+    <None Include="shaders\skyboxVS.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="resources\models\backpack\ao.jpg" />
@@ -211,6 +215,12 @@
     <Image Include="resources\textures\grass.png" />
     <Image Include="resources\textures\marble.jpg" />
     <Image Include="resources\textures\metal.png" />
+    <Image Include="resources\textures\skybox\back.jpg" />
+    <Image Include="resources\textures\skybox\bottom.jpg" />
+    <Image Include="resources\textures\skybox\front.jpg" />
+    <Image Include="resources\textures\skybox\left.jpg" />
+    <Image Include="resources\textures\skybox\right.jpg" />
+    <Image Include="resources\textures\skybox\top.jpg" />
     <Image Include="resources\textures\wall.jpg" />
   </ItemGroup>
   <ItemGroup>

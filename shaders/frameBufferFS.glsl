@@ -14,6 +14,7 @@ uniform float offset;
 #define MODE_GREY_SCALE_WEIGHTED 3
 #define MODE_SHARPEN 4
 #define MODE_EMBOSS 5
+#define MODE_TEST 6
 
 
 void main(){
@@ -72,6 +73,14 @@ void main(){
                      0,  1,  2
                 );
         }
+
+        else if (postProcessingMode == MODE_TEST){
+                kernel = float[](
+                    1.0f/9.0f,  1.0f/9.0f,  1.0f/9.0f,
+                    1.0f/9.0f,  1.0f/9.0f,  1.0f/9.0f,
+                    1.0f/9.0f,  1.0f/9.0f,  1.0f/9.0f
+                );
+        }
             
         
         // apply convolutional matrix
@@ -88,6 +97,4 @@ void main(){
         FragColor = vec4(col, 1.0);
     }
 }
-
-    /*float */
     

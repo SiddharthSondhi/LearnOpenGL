@@ -22,6 +22,7 @@
 #include "Model.h"
 #include "Utils.h"
 #include "SceneObject.h"
+#include "Cubemap.h"
 
 
 
@@ -31,13 +32,13 @@ void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode);
+void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode, int& skyboxTexture, const char** skyboxOptions, int numSkyboxOptions);
 
 void orbitLights(SceneObject& light1, SceneObject& light2);
 
 // global variables
-const unsigned int WINDOW_WIDTH = 1980;
-const unsigned int WINDOW_HEIGHT = 1280;
+const unsigned int WINDOW_WIDTH = 1920;
+const unsigned int WINDOW_HEIGHT = 1080;
 
 float deltaTime = 0.0f;	// Time between current frame and last frame
 float lastFrame = 0.0f; // Time of last frame
@@ -108,6 +109,10 @@ int main() {
     shaders.push_back(&simpleShader);
     Shader singleColorShader("./shaders/simpleVS.glsl", "./shaders/singleColorFS.glsl");
     shaders.push_back(&singleColorShader);
+    Shader skyboxShader("./shaders/skyboxVS.glsl", "./shaders/skyboxFS.glsl");
+    shaders.push_back(&skyboxShader);
+
+
     Shader frameBufferShader("./shaders/frameBufferVS.glsl", "./shaders/frameBufferFS.glsl");
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++ VERTEX DATA ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -200,6 +205,51 @@ int main() {
           0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
          -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
          -0.5f,  0.5f,  0.5f,  0.0f, 0.0f  // bottom-left        
+    };
+
+    std::vector<float> skyboxVertices = {
+        // positions          
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
     };
 
     std::vector<float> verticesPlane = {
@@ -298,47 +348,38 @@ int main() {
     GLuint metalDiffuseMap = Utils::textureFromFile("metal.png", "./resources/textures");
     GLuint grassDiffuseMap = Utils::textureFromFile("grass.png", "./resources/textures");
     GLuint redWindowDiffMap = Utils::textureFromFile("blending_transparent_window.png", "./resources/textures");
+
+    std::vector<std::string> cubemapFaces{
+        "./resources/textures/cubemaps/skybox1/right.jpg",
+        "./resources/textures/cubemaps/skybox1/left.jpg",
+        "./resources/textures/cubemaps/skybox1/top.jpg",
+        "./resources/textures/cubemaps/skybox1/bottom.jpg",
+        "./resources/textures/cubemaps/skybox1/front.jpg",
+        "./resources/textures/cubemaps/skybox1/back.jpg"
+    };
+
+    std::vector<GLuint*> skyboxes;
+    GLuint skybox1Texture = Utils::loadCubemap(cubemapFaces);
+    skyboxes.push_back(&skybox1Texture);
+
+    GLuint skyHighFluffyCloudSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/SkyHighFluffyCloud");
+    skyboxes.push_back(&skyHighFluffyCloudSkyBoxTexture);
+
+    GLuint planeteryEarthSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/PlanetaryEarth");
+    skyboxes.push_back(&planeteryEarthSkyBoxTexture);
+
+    GLuint megaSunSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/MegaSun");
+    skyboxes.push_back(&megaSunSkyBoxTexture);
+
+    GLuint highFantasySkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/highFantasy");
+    skyboxes.push_back(&highFantasySkyBoxTexture);
+
+    GLuint underTheSeaSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/underTheSea");
+    skyboxes.push_back(&underTheSeaSkyBoxTexture);
+
+
+
     
-
-    // material properties
-    objectShader.use();
-    objectShader.setFloat("material.shininess", 32.0f);
-
-    // directional light
-    objectShader.setVec3("dirLight.ambient", 0.1f, 0.1f, 0.1f);
-    objectShader.setVec3("dirLight.diffuse", 0.3f, 0.3f, 0.3f); 
-    objectShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
-    objectShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-
-    // point lights
-    objectShader.setFloat("pointLights[0].constant", 1.0f);
-    objectShader.setFloat("pointLights[0].linear", 0.022f);
-    objectShader.setFloat("pointLights[0].quadratic", 0.0019f);
-    objectShader.setVec3("pointLights[0].ambient", lightColors[0] * 0.1f);
-    objectShader.setVec3("pointLights[0].diffuse", lightColors[0]);
-    objectShader.setVec3("pointLights[0].specular", lightColors[0]);
-
-    objectShader.setFloat("pointLights[1].constant", 1.0f);
-    objectShader.setFloat("pointLights[1].linear", 0.022f);
-    objectShader.setFloat("pointLights[1].quadratic", 0.0019f);
-    objectShader.setVec3("pointLights[1].ambient", lightColors[1] * 0.1f);
-    objectShader.setVec3("pointLights[1].diffuse", lightColors[1]);
-    objectShader.setVec3("pointLights[1].specular", lightColors[1]);
-
-    // spot light
-    objectShader.setFloat("spotLight.constant", 1.0f);
-    objectShader.setFloat("spotLight.linear", 0.022f);
-    objectShader.setFloat("spotLight.quadratic", 0.0019f);
-    objectShader.setVec3("spotLight.ambient", 0.2f, 0.2f, 0.2f);
-    objectShader.setVec3("spotLight.diffuse", 0.5f, 0.5f, 0.5f);
-    objectShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
-    objectShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
-    objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
-
-    // post processing 
-    frameBufferShader.use();
-    frameBufferShader.setFloat("offset", 1.0f / 300.0f);
-    frameBufferShader.setInt("postProcessingMode", 4);
 
     //meshes and models
     stbi_set_flip_vertically_on_load(true);
@@ -390,12 +431,57 @@ int main() {
     }
 
     SceneObject frameBufferQuad(&frameBufferQuadMesh);
+    Cubemap skybox(skyboxVertices, 0);
+
+    // material properties
+    objectShader.use();
+    objectShader.setFloat("material.shininess", 32.0f);
+
+    // directional light
+    objectShader.setVec3("dirLight.ambient", 0.1f, 0.1f, 0.1f);
+    objectShader.setVec3("dirLight.diffuse", 0.3f, 0.3f, 0.3f);
+    objectShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
+    objectShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+
+    // point lights
+    objectShader.setFloat("pointLights[0].constant", 1.0f);
+    objectShader.setFloat("pointLights[0].linear", 0.022f);
+    objectShader.setFloat("pointLights[0].quadratic", 0.0019f);
+    objectShader.setVec3("pointLights[0].ambient", lightColors[0] * 0.1f);
+    objectShader.setVec3("pointLights[0].diffuse", lightColors[0]);
+    objectShader.setVec3("pointLights[0].specular", lightColors[0]);
+
+    objectShader.setFloat("pointLights[1].constant", 1.0f);
+    objectShader.setFloat("pointLights[1].linear", 0.022f);
+    objectShader.setFloat("pointLights[1].quadratic", 0.0019f);
+    objectShader.setVec3("pointLights[1].ambient", lightColors[1] * 0.1f);
+    objectShader.setVec3("pointLights[1].diffuse", lightColors[1]);
+    objectShader.setVec3("pointLights[1].specular", lightColors[1]);
+
+    // spot light
+    objectShader.setFloat("spotLight.constant", 1.0f);
+    objectShader.setFloat("spotLight.linear", 0.022f);
+    objectShader.setFloat("spotLight.quadratic", 0.0019f);
+    objectShader.setVec3("spotLight.ambient", 0.2f, 0.2f, 0.2f);
+    objectShader.setVec3("spotLight.diffuse", 0.5f, 0.5f, 0.5f);
+    objectShader.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
+    objectShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
+    objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+
+    // post processing 
+    frameBufferShader.use();
+    frameBufferShader.setFloat("offset", 1.0f / 300.0f);
+    frameBufferShader.setInt("postProcessingMode", 4);
 
     // GUI variables
     float convMatrixOffset = 300.0f;
-    const char* modes[] = { "Regular", "Inverse", "Greyscale", "Weighted Greyscale", "Sharpen", "Emboss" };
+    const char* modes[] = { "Regular", "Inverse", "Greyscale", "Weighted Greyscale", "Sharpen", "Emboss", "Test"};
     int numModes = sizeof(modes) / sizeof(modes[0]);
     int postProcessingMode = 0;
+    int skyboxTexture = 0;
+    const char* skyboxOptions[] = { "fluffy cloud", "1", "2", "3", "4", "5"};
+    int numSkyBoxes = sizeof(skyboxOptions) / sizeof(skyboxOptions[0]);
+
 
 
 
@@ -417,7 +503,7 @@ int main() {
         // input
         processInput(window);
 
-        setUpGUI(convMatrixOffset, modes, numModes, postProcessingMode);
+        setUpGUI(convMatrixOffset, modes, numModes, postProcessingMode, skyboxTexture, skyboxOptions, numSkyBoxes);
 
         //update positions
         orbitLights(light1, light2);
@@ -429,7 +515,7 @@ int main() {
 
         //calculate matrices
         glm::mat4 view = camera.getViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), 800.0f / 600.0f, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), float(WINDOW_WIDTH) / float(WINDOW_HEIGHT), 0.1f, 100.0f);
 
         //update view and projection matrices for all shaders
         for (auto shader : shaders) {
@@ -452,6 +538,7 @@ int main() {
         frameBufferShader.setFloat("offset", 1.0f / convMatrixOffset);
         frameBufferShader.setInt("postProcessingMode", postProcessingMode);
 
+        skybox.setTexture(*skyboxes[skyboxTexture]);
 
         // --------------------------------------------- rendering --------------------------------------------------
 
@@ -464,11 +551,12 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         //render SceneObjects
+        skybox.draw(skyboxShader, camera);
+
         floor.draw(simpleShader, camera);
 
         cube1.draw(simpleShader, camera);
         cube2.draw(simpleShader, camera);
-
 
         backpack.draw(objectShader, camera);
 
@@ -607,16 +695,18 @@ void orbitLights(SceneObject& light1, SceneObject& light2) {
     light2.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f)) + glm::vec3(0.0f, 8.0f, 0.0f);
 }
 
-void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode) {
+void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode, int& skyboxTexture, const char** skyboxOptions, int numSkyboxOptions) {
     // Start the ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_FirstUseEver);
+    ImGui::Begin(" ");
 
-    ImGui::Begin("Post Processing Options");
+    ImGui::Text("Frame time: %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
     ImGui::Combo("Post-Processing Mode", &currentMode, postProcessingOptions, numModes);
     ImGui::SliderFloat("1 / offset", &offset, 1.0f, 5000.0f);
+    ImGui::Combo("SkyBox Texture", &skyboxTexture, skyboxOptions, numSkyboxOptions);
+
 
     ImGui::End();
 }

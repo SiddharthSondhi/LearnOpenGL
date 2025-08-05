@@ -28,7 +28,6 @@ Mesh::Mesh(const std::vector<float>& vertices, const std::vector<unsigned int>& 
 }
 
 
-
 void Mesh::setUpAttributes(const std::vector<unsigned int>& attribSizes) {
 	glBindVertexArray(VAO);
 
