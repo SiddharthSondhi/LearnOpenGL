@@ -8,5 +8,6 @@
 build/
 x64/
 
-# Auto-generated filters
+# Auto-generated 
 *.vcxproj.filters
+imgui.ini

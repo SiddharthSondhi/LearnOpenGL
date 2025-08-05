@@ -4,28 +4,41 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
+uniform int postProcessingMode;
+uniform float offset;
 
-const float offset = 1.0 / 3000.0;  
 
-void main()
-{ 
-    //Inverse Colors
-    //FragColor = vec4(vec3(1.0 - texture(screenTexture, TexCoords)), 1.0);
+#define MODE_REGULAR 0
+#define MODE_INVERSE 1
+#define MODE_GREY_SCALE 2
+#define MODE_GREY_SCALE_WEIGHTED 3
+#define MODE_SHARPEN 4
+#define MODE_EMBOSS 5
 
-    //Grey Scale
-    /*FragColor = texture(screenTexture, TexCoords);
-    float average = (FragColor.r + FragColor.g + FragColor.b) / 3.0;
-    FragColor = vec4(average, average, average, 1.0);*/
 
-    //Grey Scale (weighted)
-    /*FragColor = texture(screenTexture, TexCoords);
-    float average = 0.2126 * FragColor.r + 0.7152 * FragColor.g + 0.0722 * FragColor.b;
-    FragColor = vec4(average, average, average, 1.0);*/
+void main(){
+    // NOT USING conv matrix
+    if (postProcessingMode == MODE_REGULAR){
+        FragColor = texture(screenTexture, TexCoords);
+    }
+    else if (postProcessingMode == MODE_INVERSE){
+        FragColor = vec4(vec3(1.0 - texture(screenTexture, TexCoords)), 1.0);
+    }
+    else if (postProcessingMode == MODE_GREY_SCALE){
+        FragColor = texture(screenTexture, TexCoords);
+        float average = (FragColor.r + FragColor.g + FragColor.b) / 3.0;
+        FragColor = vec4(average, average, average, 1.0);
+    }
+    else if (postProcessingMode == MODE_GREY_SCALE_WEIGHTED){
+        FragColor = texture(screenTexture, TexCoords);
+        float average = 0.2126 * FragColor.r + 0.7152 * FragColor.g + 0.0722 * FragColor.b;
+        FragColor = vec4(average, average, average, 1.0);
+    }
 
-    // Regular
-    //FragColor = texture(screenTexture, TexCoords);
-
-    vec2 offsets[9] = vec2[](
+    // USING conv matrix
+    else{    
+        // define offsets (how far from the surrounding pixel to measure)
+        vec2 offsets[9] = vec2[](
         vec2(-offset,  offset), // top-left
         vec2( 0.0f,    offset), // top-center
         vec2( offset,  offset), // top-right
@@ -35,35 +48,46 @@ void main()
         vec2(-offset, -offset), // bottom-left
         vec2( 0.0f,   -offset), // bottom-center
         vec2( offset, -offset)  // bottom-right    
-    );
+        );
+
+        // default kernel
+        float kernel[9] = float[](
+            0, 0, 0,
+            0, 1, 0,
+            0, 0, 0
+        );
+        
+        // kernel options
+        if (postProcessingMode == MODE_SHARPEN){
+            kernel = float[](
+                -2, -1, -2,
+                -1,  13, -1,
+                -2, -1, -2
+            );
+        }
+        else if (postProcessingMode == MODE_EMBOSS){
+                kernel = float[](
+                    -2, -1,  0,
+                    -1,  1,  1,
+                     0,  1,  2
+                );
+        }
+            
+        
+        // apply convolutional matrix
+        vec3 sampleTex[9];
     
-    float kernel[9] = float[](
-        -2, -1, -2,
-        -1,  13, -1,
-        -2, -1, -2
-    );
+        for(int i = 0; i < 9; i++){
+            sampleTex[i] = vec3(texture(screenTexture, TexCoords + offsets[i]));
+        }
 
-    /*float kernel[9] = float[](
-     -2, -1,  0,
-    -1,  1,  1,
-     0,  1,  2
-    );*/
-
-    /*float kernel[9] = float[](
-    -1, -1, -1,
-    -1,  8, -1,
-    -1, -1, -1
-    );*/
-
+        vec3 col = vec3(0.0);
+        for(int i = 0; i < 9; i++)
+            col += sampleTex[i] * kernel[i];
     
-    vec3 sampleTex[9];
-    for(int i = 0; i < 9; i++)
-    {
-        sampleTex[i] = vec3(texture(screenTexture, TexCoords + offsets[i]));
+        FragColor = vec4(col, 1.0);
     }
-    vec3 col = vec3(0.0);
-    for(int i = 0; i < 9; i++)
-        col += sampleTex[i] * kernel[i];
-    
-    FragColor = vec4(col, 1.0);
 }
+
+    /*float */
+    

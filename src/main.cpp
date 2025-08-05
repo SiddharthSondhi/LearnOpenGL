@@ -2,6 +2,10 @@
 #include <GLFW/glfw3.h>
 #include <stb_image/stb_image.h>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -20,12 +24,14 @@
 #include "SceneObject.h"
 
 
+
 // function prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode);
 
 void orbitLights(SceneObject& light1, SceneObject& light2);
 
@@ -41,6 +47,7 @@ float lastMousePosX = WINDOW_WIDTH / 2, lastMousePosY = WINDOW_HEIGHT / 2; // po
 bool firstMouse = true;
 
 bool enableFlashLight = false;
+bool mouseGUIEnabled = false;
 
 
 int main() {
@@ -76,6 +83,18 @@ int main() {
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, keyCallback);
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();  
+
+    // Style
+    ImGui::StyleColorsDark(); 
+
+    // Initialize ImGui for GLFW + OpenGL
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 460"); 
 
     std::vector<Shader*> shaders;
 
@@ -316,6 +335,10 @@ int main() {
     objectShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
     objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
+    // post processing 
+    frameBufferShader.use();
+    frameBufferShader.setFloat("offset", 1.0f / 300.0f);
+    frameBufferShader.setInt("postProcessingMode", 4);
 
     //meshes and models
     stbi_set_flip_vertically_on_load(true);
@@ -368,6 +391,12 @@ int main() {
 
     SceneObject frameBufferQuad(&frameBufferQuadMesh);
 
+    // GUI variables
+    float convMatrixOffset = 300.0f;
+    const char* modes[] = { "Regular", "Inverse", "Greyscale", "Weighted Greyscale", "Sharpen", "Emboss" };
+    int numModes = sizeof(modes) / sizeof(modes[0]);
+    int postProcessingMode = 0;
+
 
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++    
@@ -378,8 +407,8 @@ int main() {
     //glEnable(GL_CULL_FACE);
 
 
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)){
+        // --------------------------------------------- start of frame logic--------------------------------------------------
         // time logic
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -388,7 +417,7 @@ int main() {
         // input
         processInput(window);
 
-
+        setUpGUI(convMatrixOffset, modes, numModes, postProcessingMode);
 
         //update positions
         orbitLights(light1, light2);
@@ -418,6 +447,13 @@ int main() {
         objectShader.setVec3("pointLights[0].position", light1.position);
         objectShader.setVec3("pointLights[1].position", light2.position);
 
+        // post processing 
+        frameBufferShader.use();
+        frameBufferShader.setFloat("offset", 1.0f / convMatrixOffset);
+        frameBufferShader.setInt("postProcessingMode", postProcessingMode);
+
+
+        // --------------------------------------------- rendering --------------------------------------------------
 
         //before rendering bind to the framebuffer
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -463,12 +499,22 @@ int main() {
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // draw screen quad (postprocessing)
         frameBufferQuad.draw(frameBufferShader, camera);
+
+        // Then render ImGui 
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // check for/call events and then swap buffers
         glfwPollEvents();
         glfwSwapBuffers(window);
     }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glfwTerminate();
 }
 
@@ -497,9 +543,13 @@ void processInput(GLFWwindow* window)
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_F && action == GLFW_PRESS)
-    {
+    if (key == GLFW_KEY_F && action == GLFW_PRESS){
         enableFlashLight = !enableFlashLight;
+    }
+
+    if (key == GLFW_KEY_LEFT_ALT && action == GLFW_PRESS) {
+        mouseGUIEnabled = !mouseGUIEnabled;
+        glfwSetInputMode(window, GLFW_CURSOR, mouseGUIEnabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
     }
 }
 
@@ -510,6 +560,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+    if (mouseGUIEnabled) {
+        firstMouse = true;
+        return;
+    }
+
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
@@ -550,5 +605,19 @@ void orbitLights(SceneObject& light1, SceneObject& light2) {
     basePos.z = cos((glfwGetTime() + 2.14) * 2) * lightOrbitRadius;
     tilt = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::normalize(glm::vec3(0.0f, 0.0f, -1.0f)));
     light2.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f)) + glm::vec3(0.0f, 8.0f, 0.0f);
+}
+
+void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode) {
+    // Start the ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(400, 0), ImGuiCond_FirstUseEver);
+
+    ImGui::Begin("Post Processing Options");
+    ImGui::Combo("Post-Processing Mode", &currentMode, postProcessingOptions, numModes);
+    ImGui::SliderFloat("1 / offset", &offset, 1.0f, 5000.0f);
+
+    ImGui::End();
 }
 

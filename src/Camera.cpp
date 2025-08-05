@@ -67,7 +67,7 @@ void Camera::processMouseMovement(float xoffset, float yoffset, GLboolean constr
 
 void Camera::processMouseScroll(float yoffset)
 {
-    static constexpr float MAX_FOV = 150;
+    static constexpr float MAX_FOV = 360;
 
     zoom -= (float)yoffset * 2.0f;
     if (zoom < 1.0f)
