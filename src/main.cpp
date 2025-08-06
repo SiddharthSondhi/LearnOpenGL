@@ -16,6 +16,7 @@
 #include <random>
 #include <vector>
 #include <map>
+#include <array>
 
 #include "Shader.h"
 #include "Camera.h"
@@ -23,7 +24,7 @@
 #include "Utils.h"
 #include "SceneObject.h"
 #include "Cubemap.h"
-
+#include "GUI.h"
 
 
 // function prototypes
@@ -32,7 +33,6 @@ void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode, int& skyboxTexture, const char** skyboxOptions, int numSkyboxOptions);
 
 void orbitLights(SceneObject& light1, SceneObject& light2);
 
@@ -54,8 +54,8 @@ bool mouseGUIEnabled = false;
 int main() {
     // initialize GLFW (create window and OpenGL context)
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -85,18 +85,10 @@ int main() {
     glfwSetScrollCallback(window, scroll_callback);
     glfwSetKeyCallback(window, keyCallback);
 
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();  
+    //initialize GUI
+    GUI::initGUI(window);
 
-    // Style
-    ImGui::StyleColorsDark(); 
-
-    // Initialize ImGui for GLFW + OpenGL
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 460"); 
-
+    // set up shaders
     std::vector<Shader*> shaders;
 
     Shader objectShader("./shaders/objectVS.glsl", "./shaders/objectFS.glsl");
@@ -311,12 +303,12 @@ int main() {
     windowPositions.push_back(glm::vec3(0.7f, 0.0f, -2.3f));
     windowPositions.push_back(glm::vec3(1.5f, 0.0f, -0.6f));
 
-    unsigned int framebuffer;
+    GLuint framebuffer;
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
     // generate texture
-    unsigned int textureColorbuffer;
+    GLuint textureColorbuffer;
     glGenTextures(1, &textureColorbuffer);
     glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -327,7 +319,7 @@ int main() {
     // attach it to currently bound framebuffer object
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
 
-    unsigned int rbo;
+    GLuint rbo;
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -341,6 +333,8 @@ int main() {
 
     // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+    GUI::GUISettings guiSettings;
+
     // load textures
     GLuint container2DiffuseMap = Utils::textureFromFile("container2.png", "./resources/textures");
     GLuint container2SpecularMap = Utils::textureFromFile("container2_specular.png", "./resources/textures");
@@ -349,7 +343,9 @@ int main() {
     GLuint grassDiffuseMap = Utils::textureFromFile("grass.png", "./resources/textures");
     GLuint redWindowDiffMap = Utils::textureFromFile("blending_transparent_window.png", "./resources/textures");
 
-    std::vector<std::string> cubemapFaces{
+
+    // cubemaps
+    std::vector<std::string> skybox1Faces{
         "./resources/textures/cubemaps/skybox1/right.jpg",
         "./resources/textures/cubemaps/skybox1/left.jpg",
         "./resources/textures/cubemaps/skybox1/top.jpg",
@@ -358,28 +354,36 @@ int main() {
         "./resources/textures/cubemaps/skybox1/back.jpg"
     };
 
-    std::vector<GLuint*> skyboxes;
-    GLuint skybox1Texture = Utils::loadCubemap(cubemapFaces);
-    skyboxes.push_back(&skybox1Texture);
+    const int numSkyBoxes = 10;
 
-    GLuint skyHighFluffyCloudSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/SkyHighFluffyCloud");
-    skyboxes.push_back(&skyHighFluffyCloudSkyBoxTexture);
+    std::array<GLuint, numSkyBoxes> skyboxes = {
+        Utils::loadCubemap(skybox1Faces),
+        Utils::loadCubemap("./resources/textures/cubemaps/SkyHighFluffyCloud"),
+        Utils::loadCubemap("./resources/textures/cubemaps/PlanetaryEarth"),
+        Utils::loadCubemap("./resources/textures/cubemaps/MegaSun"),
+        Utils::loadCubemap("./resources/textures/cubemaps/highFantasy"),
+        Utils::loadCubemap("./resources/textures/cubemaps/underTheSea"),
+        Utils::loadCubemap("./resources/textures/cubemaps/CasualDay"),
+        Utils::loadCubemap("./resources/textures/cubemaps/DayInTheClouds"),
+        Utils::loadCubemap("./resources/textures/cubemaps/DarkStorm"),
+        Utils::loadCubemap("./resources/textures/cubemaps/CoriolisNight")
+    };
 
-    GLuint planeteryEarthSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/PlanetaryEarth");
-    skyboxes.push_back(&planeteryEarthSkyBoxTexture);
+    const char* skyboxOptions[numSkyBoxes] = {
+        "Sky Box 1", 
+        "Sky High Fluffy Cloud", 
+        "Planetary Earth", 
+        "Mega Sun", 
+        "High Fantasy", 
+        "Under The Sea",
+        "Casual Day",
+        "Day In The Clouds",
+        "Dark Storm",
+        "CoriolisNight"
+    };
 
-    GLuint megaSunSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/MegaSun");
-    skyboxes.push_back(&megaSunSkyBoxTexture);
-
-    GLuint highFantasySkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/highFantasy");
-    skyboxes.push_back(&highFantasySkyBoxTexture);
-
-    GLuint underTheSeaSkyBoxTexture = Utils::loadCubemap("./resources/textures/cubemaps/underTheSea");
-    skyboxes.push_back(&underTheSeaSkyBoxTexture);
-
-
-
-    
+    guiSettings.skyboxOptions = skyboxOptions;
+    guiSettings.numSkyBoxOptions = numSkyBoxes;
 
     //meshes and models
     stbi_set_flip_vertically_on_load(true);
@@ -468,22 +472,6 @@ int main() {
     objectShader.setFloat("spotLight.innerCutOff", glm::cos(glm::radians(12.5f)));
     objectShader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
-    // post processing 
-    frameBufferShader.use();
-    frameBufferShader.setFloat("offset", 1.0f / 300.0f);
-    frameBufferShader.setInt("postProcessingMode", 4);
-
-    // GUI variables
-    float convMatrixOffset = 300.0f;
-    const char* modes[] = { "Regular", "Inverse", "Greyscale", "Weighted Greyscale", "Sharpen", "Emboss", "Test"};
-    int numModes = sizeof(modes) / sizeof(modes[0]);
-    int postProcessingMode = 0;
-    int skyboxTexture = 0;
-    const char* skyboxOptions[] = { "fluffy cloud", "1", "2", "3", "4", "5"};
-    int numSkyBoxes = sizeof(skyboxOptions) / sizeof(skyboxOptions[0]);
-
-
-
 
     // ++++++++++++++++++++++++++++++++++++++++++++++++++ MAIN RENDER LOOP +++++++++++++++++++++++++++++++++++++++++++++++++++++++    
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
@@ -503,7 +491,7 @@ int main() {
         // input
         processInput(window);
 
-        setUpGUI(convMatrixOffset, modes, numModes, postProcessingMode, skyboxTexture, skyboxOptions, numSkyBoxes);
+        GUI::setUpGUI(guiSettings);
 
         //update positions
         orbitLights(light1, light2);
@@ -535,10 +523,10 @@ int main() {
 
         // post processing 
         frameBufferShader.use();
-        frameBufferShader.setFloat("offset", 1.0f / convMatrixOffset);
-        frameBufferShader.setInt("postProcessingMode", postProcessingMode);
+        frameBufferShader.setFloat("offset", 1.0f / guiSettings.convMatrixOffset);
+        frameBufferShader.setInt("postProcessingMode", guiSettings.postProcessingMode);
 
-        skybox.setTexture(*skyboxes[skyboxTexture]);
+        skybox.setTexture(skyboxes[guiSettings.skyboxTextureIndex]);
 
         // --------------------------------------------- rendering --------------------------------------------------
 
@@ -599,10 +587,7 @@ int main() {
         glfwSwapBuffers(window);
     }
 
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
+    GUI::shutDownGUI();
     glfwTerminate();
 }
 
@@ -674,6 +659,10 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
+    if (mouseGUIEnabled) {
+        return;
+    }
+
     camera.processMouseScroll(yoffset);
 }
 
@@ -695,19 +684,5 @@ void orbitLights(SceneObject& light1, SceneObject& light2) {
     light2.position = glm::vec3(tilt * glm::vec4(basePos, 1.0f)) + glm::vec3(0.0f, 8.0f, 0.0f);
 }
 
-void setUpGUI(float& offset, const char** postProcessingOptions, int numModes, int& currentMode, int& skyboxTexture, const char** skyboxOptions, int numSkyboxOptions) {
-    // Start the ImGui frame
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    ImGui::Begin(" ");
 
-    ImGui::Text("Frame time: %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::Combo("Post-Processing Mode", &currentMode, postProcessingOptions, numModes);
-    ImGui::SliderFloat("1 / offset", &offset, 1.0f, 5000.0f);
-    ImGui::Combo("SkyBox Texture", &skyboxTexture, skyboxOptions, numSkyboxOptions);
-
-
-    ImGui::End();
-}
 
